@@ -1,0 +1,8 @@
+buckets: 15,25,40,60
+hooks:
+  - class: PrintModelAnalysisHook
+  - class: MetadataCaptureHook
+  - class: SyncReplicasOptimizerHook
+  - class: TrainSampleHook
+    params:
+      every_n_steps: 5000
