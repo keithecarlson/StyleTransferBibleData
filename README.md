@@ -21,7 +21,7 @@ And also specify the directory that you have installed this repository into:
 
 Then, combine the public->public training data files back together:  
 ```
-cat $REP_DIR/Data/Samples/publicVersions/Train1.tgt $REP_DIR/Data/Samples/publicVersions/Train2.tgt $REP_DIR/Data/Samples/publicVersions/Train3.tgt $REP_DIR/Data/Samples/publicVersions/Train4.tgt > ~$REP_DIR/Data/Samples/publicVersions/Train.tgt 
+cat $REP_DIR/Data/Samples/publicVersions/Train1.tgt $REP_DIR/Data/Samples/publicVersions/Train2.tgt $REP_DIR/Data/Samples/publicVersions/Train3.tgt $REP_DIR/Data/Samples/publicVersions/Train4.tgt > $REP_DIR/Data/Samples/publicVersions/Train.tgt 
 
 cat $REP_DIR/Data/Samples/publicVersions/Train1.sourc $REP_DIR/Data/Samples/publicVersions/Train2.sourc $REP_DIR/Data/Samples/publicVersions/Train3.sourc $REP_DIR/Data/Samples/publicVersions/Train4.sourc > $REP_DIR/Data/Samples/publicVersions/Train.sourc 
 
@@ -43,7 +43,7 @@ We need to create versions of the files which are simply tokenized using nltk an
 
 	mkdir ../Data/BPESamples
 
-	python massApplyBPE.py ../Data/Samples/ ../Data/BPESamples/ ../Data/simpleTokenBPECodes30000.txt
+	python massApplyBPE.py ../Data/simpleTokenSamples/ ../Data/BPESamples/ ../Data/simpleTokenBPECodes30000.txt
 
 
 Next we will create versions of the sourc files which don't have the target version tag prepended.  These will be used for training Moses and evaluating all results:
@@ -81,7 +81,7 @@ To ease usage of Moses's Experiment Management System, create a MosesData direct
 	
 	mkdir -p $REP_DIR/Data/Samples/KJVToASV/MosesData
 
-Populate it with the correct files for the Moses run:
+Populate it with the correct files for the version:
 
 	cp $REP_DIR/Data/Samples/KJVToASV/unTaggedTrain.sourc $REP_DIR/Data/Samples/KJVToASV/MosesData/Train.sourc
 	cp $REP_DIR/Data/Samples/KJVToASV/unTaggedDevClean.sourc $REP_DIR/Data/Samples/KJVToASV/MosesData/Dev.sourc
@@ -231,11 +231,11 @@ Including where you have moses installed, so you may need to change this
 
 Now you will need to create a configuration file for Moses's Experiment Management System.  An example is provided in Code/MosesConfigs/KJVToASVConfig.exp.  In general you may need to modify the following lines:
 
-	repository-dir = ~/BibleStyleTransfer #update to point to REP_DIR
+	repository-dir = /home/kcarlson/StyleTransferBibleData #update to point to REP_DIR
 
 	working-dir = $repository-dir/Models/KJVToASVMoses #update to point to MODEL_DIR
 
-	moses-src-dir = ~/mosesdecoder #update to point to your installation of moses
+	moses-src-dir = /home/kcarlson/mosesdecoder #update to point to your installation of moses
 
 	raw-stem = $bible-data/KJVToASV/MosesData/Train  #change KJVToASV to the pairing you are using for training this model
 
