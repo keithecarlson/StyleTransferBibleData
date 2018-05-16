@@ -1,0 +1,289 @@
+################################################
+### CONFIGURATION FILE FOR AN SMT EXPERIMENT ###
+################################################
+
+[GENERAL]
+### directory of repository
+repository-dir = /home/kcarlson/BibleStyleTransfer
+
+### directory in which experiment is run
+#
+working-dir = $repository-dir/Models/KJVToASVMoses
+
+# specification of the language pair
+input-extension = sourc
+output-extension = tgt
+pair-extension = sourc-tgt
+
+### directories that contain tools and data
+# 
+# moses
+moses-src-dir = ~/mosesdecoder
+#
+# moses binaries
+moses-bin-dir = $moses-src-dir/bin
+#
+# moses scripts
+moses-script-dir = $moses-src-dir/scripts
+#
+# directory where GIZA++/MGIZA programs resides
+external-bin-dir = $moses-src-dir/mgiza/mgizapp/bin
+
+# data
+bible-data = $repository-dir/Data/Samples
+
+### basic tools
+#
+# moses decoder
+decoder = $moses-bin-dir/moses
+
+# conversion of rule table into binary on-disk format
+ttable-binarizer = "$moses-bin-dir/CreateOnDiskPt 1 1 4 100 2"
+
+
+### generic parallelizer for cluster and multi-core machines
+# you may specify a script that allows the parallel execution
+# parallizable steps (see meta file). you also need specify 
+# the number of jobs (cluster) or cores (multicore)
+#
+generic-parallelizer = $moses-script-dir/ems/support/generic-parallelizer.perl
+#generic-parallelizer = $moses-script-dir/ems/support/generic-multicore-parallelizer.perl
+
+### cluster settings (if run on a cluster machine)
+# number of jobs to be submitted in parallel
+#
+jobs = 16
+
+
+
+### multi-core settings
+# when the generic parallelizer is used, the number of cores
+# specified here 
+cores = 8
+
+#################################################################
+# PARALLEL CORPUS PREPARATION: 
+# create a tokenized, sentence-aligned corpus, ready for training
+
+[CORPUS]
+
+### long sentences are filtered out, since they slow down GIZA++ 
+# and are a less reliable source of data. set here the maximum
+# length of a sentence
+#
+max-sentence-length = 100
+
+
+[CORPUS:BibleVerses]
+raw-stem = $bible-data/KJVToASV/MosesData/Train
+
+
+
+
+#################################################################
+# LANGUAGE MODEL TRAINING
+
+[LM]
+
+### tool to be used for language model training
+# kenlm training
+lm-training = "$moses-script-dir/ems/support/lmplz-wrapper.perl -bin $moses-bin-dir/lmplz"
+settings = "--prune '0 0 1' -T $working-dir/lm -S 10%"
+
+# order of the language model
+order = 5
+
+
+# kenlm, also set type to 8
+lm-binarizer = $moses-bin-dir/build_binary
+type = 8
+
+
+[LM:BibleVerses]
+#Use only the single source single target version for training the LM
+raw-corpus = $bible-data/KJVToASV/Train.$output-extension
+
+
+
+#################################################################
+# TRANSLATION MODEL TRAINING
+
+[TRAINING]
+
+### training script to be used: either a legacy script or 
+# current moses training script (default) 
+# 
+script = $moses-script-dir/training/train-model.perl
+
+### general options
+# these are options that are passed on to train-model.perl, for instance
+# * "-mgiza -mgiza-cpus 8" to use mgiza instead of giza
+# * "-sort-buffer-size 8G -sort-compress gzip" to reduce on-disk sorting
+# * "-sort-parallel 8 -cores 8" to speed up phrase table building
+# * "-parallel" for parallel execution of mkcls and giza
+#
+training-options = "-mgiza -mgiza-cpus 16"
+
+
+### parallelization of data preparation step
+# the two directions of the data preparation can be run in parallel
+# comment out if not needed
+#
+parallel = yes
+
+
+### symmetrization method to obtain word alignments from giza output
+# (commonly used: grow-diag-final-and)
+#
+alignment-symmetrization-method = grow-diag-final-and
+
+
+### lexicalized reordering: specify orientation type
+# (default: only distance-based reordering model)
+#
+lexicalized-reordering = msd-bidirectional-fe
+
+
+### settings for rule extraction
+#
+#extract-settings = ""
+max-phrase-length = 5
+
+
+### settings for rule scoring
+#
+score-settings = "--GoodTuring --MinScore 2:0.0001"
+
+
+#####################################################
+### TUNING: finding good weights for model components
+
+[TUNING]
+
+
+### tuning script to be used
+#
+tuning-script = $moses-script-dir/training/mert-moses.pl
+tuning-settings = "-mertdir $moses-bin-dir"
+
+### specify the corpus used for tuning 
+# it should contain 1000s of sentences
+#
+
+raw-input = $bible-data/KJVToASV/MosesData/Dev.$input-extension
+
+raw-reference = $bible-data/KJVToASV/MosesData/Dev.$output-extension
+
+### size of n-best list used (typically 100)
+#
+nbest = 100
+
+
+### additional flags for the filter script
+#
+filter-settings = ""
+
+### additional flags for the decoder
+#
+decoder-settings = "-threads $cores"
+
+
+#######################################################
+## TRUECASER: train model to truecase corpora and input
+
+[TRUECASER]
+
+### script to train truecaser models
+#
+trainer = $moses-script-dir/recaser/train-truecaser.perl
+
+
+######################################################################
+## EVALUATION: translating a test set using the tuned system and score it
+
+[EVALUATION]
+
+### number of jobs (if parallel execution on cluster)
+#
+jobs = 16
+
+
+### additional decoder settings
+# switches for the Moses decoder
+# common choices: 
+#   "-threads N" for multi-threading
+#   "-mbr" for MBR decoding
+#   "-drop-unknown" for dropping unknown source words
+#   "-search-algorithm 1 -cube-pruning-pop-limit 5000 -s 5000" for cube pruning
+#
+decoder-settings = "-search-algorithm 1 -cube-pruning-pop-limit 5000 -s 5000 -threads $cores"
+
+
+### prepare system output for scoring 
+# this may include detokenization and wrapping output in sgm 
+# (needed for nist-bleu, ter, meteor)
+#
+detokenizer = "$moses-script-dir/tokenizer/detokenizer.perl -l $output-extension"
+
+wrapping-script = "$moses-script-dir/ems/support/wrap-xml.perl $output-extension"
+
+
+### BLEU
+#
+multi-bleu = "$moses-script-dir/generic/multi-bleu.perl -lc"
+multi-bleu-c = $moses-script-dir/generic/multi-bleu.perl
+
+
+### Analysis: carry out various forms of analysis on the output
+#
+analysis = $moses-script-dir/ems/support/analysis.perl
+#
+# also report on input coverage
+analyze-coverage = yes
+#
+# also report on phrase mappings used
+report-segmentation = yes
+
+
+[EVALUATION:KJVToASV]
+
+### input data
+#
+raw-input = $bible-data/KJVToASV/MosesData/Test.$input-extension
+
+
+### reference data
+#
+raw-reference = $bible-data/KJVToASV/MosesData/Test.$output-extension
+
+
+[EVALUATION:BBEToASV]
+
+### input data
+#
+raw-input = $bible-data/BBEToASV/MosesData/Test.$input-extension
+
+
+### reference data
+#
+raw-reference = $bible-data/BBEToASV/MosesData/Test.$output-extension
+
+[EVALUATION:publicToASV]
+
+### input data
+#
+raw-input = $bible-data/publicVersionsToASV/MosesData/Test.$input-extension
+
+
+### reference data
+#
+raw-reference = $bible-data/publicVersionsToASV/MosesData/Test.$output-extension
+
+
+##########################################
+### REPORTING: summarize evaluation scores
+
+[REPORTING]
+
+
+
