@@ -1,6 +1,6 @@
 # StyleTransferBibleData
 
-The code and data here are associated with "Evaluating Prose Style Transfer with the Bible", currently under review.
+The code and data here are associated with "Evaluating Prose Style Transfer with the Bible" which can be found at https://royalsocietypublishing.org/doi/full/10.1098/rsos.171920
 
 The training, testing, and development data files are provided with the target style tags at the beginning of each source line as they were used by the seq2seq model in our paper.  This may be useful information for other systems, but versions of these files without the tags will be created by following the instructions below.  
 
